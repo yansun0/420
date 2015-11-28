@@ -1,0 +1,4 @@
+scene detection:
+ - displaced frame difference
+ - SIFT detector
+ - histagram based on colors
