@@ -30,13 +30,10 @@ function run_histogram_detector(clip_number)
 		image_clip_format = clip_3_format;
 		image_clip_directory = CLIP_3_DIR;
 	end
-	% fontSize = 10;
-	% Want 155 to 156
 
 	prev_frame_change = 0;
 	scene_num = 1;
 	for i = start_frame:second_last_frame
-	% for i = clip_1_start_frame
 	    im_cur = imread(fullfile(image_clip_directory, sprintf(image_clip_format, i)));
 	    im_next = imread(fullfile(image_clip_directory, sprintf(image_clip_format, i+1)));
 	    sim = get_similarity(im_cur, im_next);
@@ -62,10 +59,4 @@ function run_histogram_detector(clip_number)
 		else
 			prev_frame_change = 0;
 		end
-		% figure;
-		% bar(grayLevels, pixelCount); % Plot it as a bar chart.
-		% title('Histogram of original image', 'FontSize', fontSize);
-		% xlabel('Red Level', 'FontSize', fontSize);
-		% ylabel('Pixel Count', 'FontSize', fontSize);
-		% xlim([0 grayLevels(end)]); % Scale x axis manually.
 	end
