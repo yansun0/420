@@ -1,10 +1,16 @@
 scene detection:
  - displaced frame difference
- - SIFT detector
+ - (NOT VIABLE) SIFT detector
  - histagram based on colors
 
+logo detection:
+ - template matching, maybe bias the weights against the center
+
+face detection:
+ - ???
+
  TODO:
- - turn scene detector data into 0, 1 vector
+ - (DONE) turn scene detector data into 0, 1 vector
  	- contiguous 0s = not change
   	- contiguous 1s = change occurig
   	- Use canny to map floats to binary
