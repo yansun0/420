@@ -1,5 +1,7 @@
 scene detection:
- - displaced frame difference
+ - displaced frame difference aka block matching
+ 	- http://www.mathworks.com/help/vision/ref/blockmatching.html
+	- http://web.stanford.edu/class/ee398a/handouts/lectures/EE398a_MotionEstimation_2012.pdf
  - (NOT VIABLE) SIFT detector
  - histagram based on colors
 
