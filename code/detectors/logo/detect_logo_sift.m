@@ -1,14 +1,17 @@
 function [results, pos] = detect_logo_sift(frames, network)
     run('./vlfeat/toolbox/vl_setup');
 
-    logo_im = load_logo(network);
+    results = [];
+    pos = [];
+    logo = load_logo(network);
 
     FIRST_FRAME = 1;
     LAST_FRAME = numel(fieldnames(frames));
     SCORE_THRESHOLD = 0;
+    PADDING = 5;
 
-    logo_gray = im2single(rgb2gray(logo_im));
-    for i = FIRST_FRAME:LAST_FRAME-1
+    logo_gray = im2single(rgb2gray(logo));
+    for i = FIRST_FRAME:LAST_FRAME
         frame = frames.(sprintf('frame%d',i));
         frame_gray = im2single(rgb2gray(frame));
         
@@ -26,21 +29,34 @@ function [results, pos] = detect_logo_sift(frames, network)
                        logo_im_size(2), 1, 0, 0, 1, 0; ...
                        0, 0, logo_im_size(2), 1, 0, 1 ];
             edges = P_edge * A;
-            figure;
-            imshow(frame);
-            hold on;
-            scatter(edges(1),edges(2),100,'r','fill');
-            scatter(edges(3),edges(4),100,'g','fill');
-            scatter(edges(5),edges(6),100,'b','fill');
-            scatter(edges(7),edges(8),100,'y','fill');
-            hold off;
+
+%             figure;
+%             imshow(frame);
+%             hold on;
+%             scatter(edges(1),edges(2),100,'r','fill');
+%             scatter(edges(3),edges(4),100,'g','fill');
+%             scatter(edges(7),edges(8),100,'y','fill');
+%             scatter(edges(5),edges(6),100,'b','fill');
+%             hold off;
             
-            size(edges);
+            % top left = 1,2
+            % bot left = 3,4
+            % top right = 7,8
+            % bot right = 5,6
+            x = mean([edges(1) edges(3)]) - PADDING;
+            y = mean([edges(2) edges(8)]) - PADDING;
+            w = mean([edges(7) edges(5)]) - x + 2*PADDING;
+            h = mean([edges(4) edges(6)]) - y + 2*PADDING;
+            
+            % TODO: filter logos here
+            
+            results = [results; 1]; %#ok<AGROW>
+            pos = [pos; [x y w h]]; %#ok<AGROW>
+        else
+            results = [results; 0]; %#ok<AGROW>
+            pos = [pos; [0 0 0 0]]; %#ok<AGROW>
         end
     end
-        
-    results = [];
-    pos = [];
 end
 
 
