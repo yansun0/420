@@ -9,7 +9,7 @@ function [results, pos] = detect_logo_sift(frames, network)
 
     logo_gray = im2single(rgb2gray(logo_im));
     for i = FIRST_FRAME:LAST_FRAME-1
-        frame = frames.(sprintf('img%d',i));
+        frame = frames.(sprintf('frame%d',i));
         frame_gray = im2single(rgb2gray(frame));
         
         [score, A] = match(frame_gray,logo_gray);

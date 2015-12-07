@@ -7,8 +7,8 @@ function results = detect_scene_dfd(frames)
 
     D = zeros(LAST_FRAME-1,1);
     for i = FIRST_FRAME:LAST_FRAME-1
-        img_cur = imresize(rgb2gray(frames.(sprintf('img%d',i))), IMG_SIZE);
-        img_next = imresize(rgb2gray(frames.(sprintf('img%d',i+1))), IMG_SIZE);
+        img_cur = imresize(rgb2gray(frames.(sprintf('frame%d',i))), IMG_SIZE);
+        img_next = imresize(rgb2gray(frames.(sprintf('frame%d',i+1))), IMG_SIZE);
 
         dists = zeros(NUM_BLOCKS, NUM_BLOCKS, 2);
         for n = 1:NUM_BLOCKS

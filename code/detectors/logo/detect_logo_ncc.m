@@ -8,7 +8,7 @@ function [results, pos] = detect_logo_ncc(frames, network)
     LAST_FRAME = numel(fieldnames(frames));
 
     for i = FIRST_FRAME:LAST_FRAME-1
-        frame = frames.(sprintf('img%d',i));
+        frame = frames.(sprintf('frame%d',i));
         logo_gray = im2single(rgb2gray(logo));
         frame_gray = im2single(rgb2gray(frame));
         

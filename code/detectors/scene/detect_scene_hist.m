@@ -5,8 +5,8 @@ function results = detect_scene_hist(frames)
 	scene_num = 1;
     scene_vals = zeros(LAST_FRAME-1,1);
 	for i = FIRST_FRAME:LAST_FRAME-1
-        img_cur = frames.(sprintf('img%d',i));
-        img_next = frames.(sprintf('img%d',i+1));
+        img_cur = frames.(sprintf('frame%d',i));
+        img_next = frames.(sprintf('frame%d',i+1));
 	    sim = get_similarity(img_cur, img_next);
 		fprintf('Similarity of frame %d to %d: %.4f\n', i, i + 1, sim);
         

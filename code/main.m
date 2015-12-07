@@ -3,7 +3,7 @@ function main
     % load helper code
     addpath(genpath(fullfile(pwd, 'detectors')));
 
-    clip = load_imgs(1);
+    clip = load_frames('vid', 1);
     
     % SCENE
 %     results = run_detectors(clip, struct('scene','hist'));
@@ -28,7 +28,8 @@ function main
 %     end
     
     % LOGO
-    run_detectors(clip, struct('logo','sift','network','nbc'));
+    run_detectors(clip, struct('logo','sift','network','abc'));
+%     run_detectors(clip, struct('logo','ncc','network','abc'));
 
 end
 
@@ -73,19 +74,54 @@ end
 
 
 % load images into struct
-% fieldnames: 'img1', 'img2', ..., 'img{n}'
-function result = load_imgs(clip_num)
-    CLIP_DIR = sprintf('../clip_%d', clip_num);
-    CODE_DIR = '../code/';
-    
-    cd(CLIP_DIR);
-    img_files = dir('*.jpg');
-    imgs = struct;
-    for i = 1:length(img_files)
-        img = imread(img_files(i).name);
-        imgs = setfield(imgs, sprintf('img%d', i), img); %#ok<SFLD>
-    end
-    cd(CODE_DIR);    
+% fieldnames: 'frame1', 'frame2', ..., 'frame{n}'
+function result = load_frames(clip_type, clip_id)
+    switch clip_type
+        case 'img'
+            CLIP_DIR = sprintf('../clips/imgs/%d', clip_id);
+            CODE_DIR = '../../../code/';
 
-    result = imgs;
+            cd(CLIP_DIR);
+            frames_files = dir('*.jpg');
+            frames = struct;
+            for i = 1:length(frames_files)
+                frame = imread(frames_files(i).name);
+                frames = setfield(frames, sprintf('frame%d', i), frame); %#ok<SFLD>
+            end
+            cd(CODE_DIR);    
+
+            result = frames;
+            
+        case 'vid'
+            CLIP_DIR = '../clips/videos/';
+            CODE_DIR = '../../code/';
+            
+            cd(CLIP_DIR);
+            vid_name = '';
+            switch clip_id
+                case 1
+                    vid_name = 'abc';
+                case 2
+                    vid_name = 'cnn';
+                case 3
+                    vid_name = 'fox';
+            end
+            
+            vid = VideoReader(sprintf('%s.mp4', vid_name));
+            frames = struct;
+            time = 0;
+            while hasFrame(vid)
+                if time > vid.Duration
+                    break;
+                end
+                vid.CurrentTime = time;
+                frame = readFrame(vid);
+                frames = setfield(frames, sprintf('frame%d', time), frame); %#ok<SFLD>                    
+                time = time + 1;
+            end
+            cd(CODE_DIR);
+            
+            result = frames;
+    end
+
 end
