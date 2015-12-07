@@ -3,28 +3,21 @@ function main
     % load helper code
     addpath(genpath(fullfile(pwd, 'detectors')));
 
-    frames = load_frames('img', 3);
+    clip = struct('type','img','id', 2);
 
+    frames = load_frames(clip);
     results = run_detectors(frames, ...
-        struct('scene', struct('type','dfd', ...        % dfd or hist
+        struct('clip', clip, ...
+               'scene', struct('type','hist', ...        % dfd or hist
                                'threshold', 0.91), ...  % hist:(0,1)  dfd:[h,l] 
                'logo', struct('type','ncc', ...         % ncc or sift
-                               'network','flicks', ...  % see below
-                               'threshold', 0.75)));    % only for ncc  
-%                                'threshold', [5,2]), ... % hist:(0,1)  dfd:[h,l]
-%                                'threshold', 0.91), ...  % hist:(0,1)  dfd:[h,l] 
-    % network vals:
-    %   imgs: 1 = nbc
-    %         2 = clevver
-    %         3 = flicks
-    %   vids: 1 = abc
-    %         2 = cnn
-    %         3 = fox
-
+                               'threshold', 0.75)));    % only for ncc
     save('results.mat', 'results');
 %     load('results.mat');
 
-    show_results(results, 'img', 3);
+%                                'threshold', [5,2]), ... % hist:(0,1)  dfd:[h,l]
+%                                'threshold', 0.91), ...  % hist:(0,1)  dfd:[h,l] 
+    show_results(results, clip);
 end
 
 
@@ -52,34 +45,33 @@ function results = run_detectors(frames, options)
     logo_results = [];
     logo_pos = [];
     if isfield(options, 'logo')
+        network = get_network(options.clip);
         switch options.logo.type
             case 'sift'
-                [logo_results,logo_pos] = detect_logo_sift(frames, ...
-                                                           options.logo.network);
+                [logo_results,logo_pos] = detect_logo_sift(frames,network);
             case 'ncc'
-                [logo_results,logo_pos] = detect_logo_ncc(frames, ...
-                                                          options.logo.network, ...
+                [logo_results,logo_pos] = detect_logo_ncc(frames,network, ...
                                                           options.logo.threshold);            
         end    
     end
-    fprintf('-> done\n');
+    fprintf('-> done\n');   
     
-    
-    % TODO: add face here
-    
+    % face detection was preprocessed, and saved as .mat files
+    fprintf('running -- face detector\n');
+    [face_tracks, num_faces] = load_face_detection(options.clip);
     
     results = struct('scene', scene_results, ...
-                     'logo', struct('here', logo_results, 'pos', logo_pos) ...
-                     );
+                     'logo', struct('here',logo_results,'pos',logo_pos), ...
+                     'face', struct('tracks',face_tracks,'num',num_faces));
 end
 
 
 % load images into struct
 % fieldnames: 'frame1', 'frame2', ..., 'frame{n}'
-function result = load_frames(clip_type, clip_id)
-    switch clip_type
+function result = load_frames(clip)    
+    switch clip.type
         case 'img'
-            CLIP_DIR = sprintf('../clips/imgs/%d', clip_id);
+            CLIP_DIR = sprintf('../clips/imgs/%d', clip.id);
             CODE_DIR = '../../../code/';
 
             cd(CLIP_DIR);
@@ -94,7 +86,7 @@ function result = load_frames(clip_type, clip_id)
             result = frames;
             
         case 'vid'
-            vid = get_video(clip_id);
+            vid = get_video(clip.id);
             frames = struct;
             time = 0;
             while hasFrame(vid)
@@ -109,7 +101,30 @@ function result = load_frames(clip_type, clip_id)
             
             result = frames;
     end
+end
 
+function network_name = get_network(clip)
+    network_name = '';
+    switch clip.type
+        case 'vid'
+            switch clip.id
+                case 1
+                    network_name = 'abc';
+                case 2
+                    network_name = 'cnn';
+                case 3
+                    network_name = 'fox';
+            end
+        case 'img'
+            switch clip.id
+                case 1
+                    network_name = 'nbc';
+                case 2
+                    network_name = 'clevver';
+                case 3
+                    network_name = 'flicks';
+            end
+    end
 end
 
 function vid = get_video(clip_id)
@@ -131,14 +146,54 @@ function vid = get_video(clip_id)
 end
 
 
-function show_results(results, clip_type, clip_id)
+function [results, num_tracks] = load_face_detection(clip)
+    CLIP_DIR = sprintf('../clips/imgs/%d-tracks', clip.id);
+    CODE_DIR = '../../../code';
+    
+    cd(CLIP_DIR);
+    features_files = dir('*.mat');
+    all_tracks = struct;
+    frame_num = 0;
+    id_base = 0;
+    for i = 1:length(features_files)
+        % expected var here `gender_paths`
+        % 3D: [xleft,ytop,xright,ybottom,id,score,gender] x npath
+        load(features_files(i).name);
+
+        % process the tracks
+        num_frames = size(gender_paths,1);
+        num_tracks = size(gender_paths,3);
+        for j = 1:num_frames
+            tracks = zeros(num_tracks,6);
+            for k = 1:num_tracks
+                x = gender_paths(j,1,k);
+                y = gender_paths(j,2,k);
+                w = gender_paths(j,3,k) - gender_paths(j,1,k);
+                h = gender_paths(j,4,k) - gender_paths(j,2,k);
+                id = id_base + k;
+                gender = gender_paths(j,7,k);
+                tracks(k,:) = [x y w h id gender];
+            end
+            frame_num = frame_num + 1;
+            all_tracks = setfield(all_tracks, sprintf('frame%d', frame_num), tracks); %#ok<SFLD>
+        end
+        id_base = id_base + num_tracks;
+    end
+    cd(CODE_DIR);
+    
+    results = all_tracks;
+    num_tracks = id_base;
+end
+
+
+function show_results(results, clip)
     fprintf('rendering output\n');
 
     cd('../results/');
-    out_vid = VideoWriter(sprintf('%s-%d.mp4', clip_type, clip_id), 'MPEG-4');
+    out_vid = VideoWriter(sprintf('%s-%d.mp4', clip.type, clip.id), 'MPEG-4');
     out_vid.Quality = 100;
 
-    switch clip_type
+    switch clip.type
         case 'img'
             out_vid.FrameRate = 8;
             open(out_vid);
@@ -148,22 +203,31 @@ function show_results(results, clip_type, clip_id)
             scene_num = 1;
             prev_frame_scene = 0;
             
+            % set up colors for face tracking
+            colors = zeros(results.face.num, 3);
+            for i = 1:size(colors,1)
+                colors(i,:) = rand(1,3);
+            end
+            
             f = figure('Visible','off','Units', 'pixels');
             
-            frames = load_frames(clip_type, clip_id);
+            frames = load_frames(clip);
             FIRST_FRAME = 1;
             LAST_FRAME = numel(fieldnames(frames));            
             for i = FIRST_FRAME:LAST_FRAME
                 % get each frame
                 fprintf('   frame %d\n',i);
-                frame = frames.(sprintf('frame%d',i));
+                frame_id = sprintf('frame%d',i);
+                frame = frames.(frame_id);
                 imshow(frame);
                 hold on;
                 
                 % output the scene change
                 if results.scene(i) && ~prev_frame_scene
+                    fprintf('    SHOT CHANGED\n');
                     scene_num = scene_num+1;
                 end
+                
                 prev_frame_scene = results.scene(i);
                 text(10, 15, sprintf('SCENE %d', scene_num), ...
                     'Color','white','FontSize',18,'FontWeight','bold');
@@ -175,6 +239,27 @@ function show_results(results, clip_type, clip_id)
                     rectangle('Position',logo_pos,'EdgeColor','r','LineWidth',2);
                 end
                 
+                % output face detection
+                face_detections = results.face.tracks.(frame_id);
+                for j = 1:size(face_detections,1)
+                    face = face_detections(j,:);
+                    face_pos = face(1:4);
+                    face_id = face(5);
+                    face_gender = face(6);
+                    if ~sum(face_pos)
+                        continue;
+                    end
+                    
+                    color = colors(face_id,:);
+                    rectangle('Position',face_pos,'EdgeColor',color,'LineWidth',2);
+                    gender = 'Female';
+                    if ~face_gender
+                        gender = 'Male';
+                    end
+                    text(face(1)+5,face(2)+15,gender,'Color',color, ...
+                         'FontSize',18,'FontWeight','bold');
+                end
+                
                 hold off;
                 
                 % save the frame into the video
@@ -184,7 +269,7 @@ function show_results(results, clip_type, clip_id)
             end
 
         case 'vid'
-            vid = get_video(clip_id);
+            vid = get_video(clip.id);
             out_vid.FrameRate = vid.FrameRate;
             open(out_vid);
 
@@ -212,6 +297,7 @@ function show_results(results, clip_type, clip_id)
                 hold on;
                 
                 % output the scene change
+
                 
                 % output the logo
                 if cur_logo_result.here
