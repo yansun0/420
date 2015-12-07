@@ -1,4 +1,4 @@
-function results = detect_scene_dfd(frames)
+function results = detect_scene_dfd(frames, thresholds)
     IMG_SIZE = [100 100];
     NUM_BLOCKS = 5;
     BLOCK_SIZE = IMG_SIZE / NUM_BLOCKS;
@@ -42,18 +42,18 @@ function results = detect_scene_dfd(frames)
         D(i) = pdist2(dists_x(:)', dists_y(:)');
     end
     
-    results = filter_results(D);
+    results = filter_results(D, thresholds);
 end
 
 % turn raw scene values into 0, 1
 % where 0 = continution of the previous scene
 %       1 = new scene
-function results = filter_results(scene_vals_raw)
+function results = filter_results(scene_vals_raw, thresholds)
     mu = mean(scene_vals_raw);
     sigma = std(scene_vals_raw);
     top_vals = sort(scene_vals_raw, 'descend');
-    thresh_high = min(mu + 5*sigma, mean(top_vals(1:3,:)));
-    thresh_low = min(mu + 2*sigma, mean(top_vals(1:3,:)));
+    thresh_high = min(mu + thresholds(1)*sigma, mean(top_vals(1:3,:)));
+    thresh_low = min(mu + thresholds(2)*sigma, mean(top_vals(1:3,:)));
 
     % idea: high threshold + low threshold, canny like
     scenes_val = scene_vals_raw>thresh_low & scene_vals_raw<thresh_high;

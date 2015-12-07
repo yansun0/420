@@ -2,14 +2,17 @@ scene detection:
  - displaced frame difference aka block matching
  	- http://www.mathworks.com/help/vision/ref/blockmatching.html
 	- http://web.stanford.edu/class/ee398a/handouts/lectures/EE398a_MotionEstimation_2012.pdf
- - (NOT VIABLE) SIFT detector
+	- Results: works more for clear cut scene transitions than a smooth transition over several frames
  - histagram based on colors
+ - edge case: first frame might have fadein/fadeout effect from the longer cut, it shouldn't count even if it gets detected
 
 logo detection:
  - template matching, maybe bias the weights against the center
 
+
 face detection:
  - ???
+
 
  TODO:
  - (DONE) turn scene detector data into 0, 1 vector

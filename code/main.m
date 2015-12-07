@@ -1,19 +1,30 @@
 % loads images, runs detectors, draw and display results
 function main
     % load helper code
-%     addpath(genpath(fullfile(pwd, 'detectors')));
-% 
-%     frames = load_frames('img', 1);
-% 
-%     results = run_detectors(frames, ...
-%         struct('scene','dfd', ... % dfd or hist
-%                'logo','ncc', ...  % ncc or sift
-%                'network','nbc')); % has to match broadcast
-%            
-%     save('results.mat', 'results');
-    load('results.mat');
+    addpath(genpath(fullfile(pwd, 'detectors')));
 
-    show_results(results, 'img', 1);
+    frames = load_frames('img', 3);
+
+    results = run_detectors(frames, ...
+        struct('scene', struct('type','dfd', ...        % dfd or hist
+                               'threshold', 0.91), ...  % hist:(0,1)  dfd:[h,l] 
+               'logo', struct('type','ncc', ...         % ncc or sift
+                               'network','flicks', ...  % see below
+                               'threshold', 0.75)));    % only for ncc  
+%                                'threshold', [5,2]), ... % hist:(0,1)  dfd:[h,l]
+%                                'threshold', 0.91), ...  % hist:(0,1)  dfd:[h,l] 
+    % network vals:
+    %   imgs: 1 = nbc
+    %         2 = clevver
+    %         3 = flicks
+    %   vids: 1 = abc
+    %         2 = cnn
+    %         3 = fox
+
+    save('results.mat', 'results');
+%     load('results.mat');
+
+    show_results(results, 'img', 3);
 end
 
 
@@ -22,29 +33,36 @@ function results = run_detectors(frames, options)
 
     % frames=[f1 f2 f3 f4] -> scene_results=[f1f2 f2f3 f3f4]
     % ex. if there's a scene change f2->f3 then scene_results=[0 1 0]
+    fprintf('running -- scene detector\n');
     scene_results = [];
     if isfield(options, 'scene')
-        switch options.scene
+        switch options.scene.type
             case 'hist'
-                scene_results = detect_scene_hist(frames);
+                scene_results = detect_scene_hist(frames,options.scene.threshold);
             case 'dfd'
-                scene_results = detect_scene_dfd(frames);
+                scene_results = detect_scene_dfd(frames,options.scene.threshold);
         end
     end
+    fprintf('-> done\n');
     
     % frame=[f1 f2 f3 f4] ->
     %     logo_results=[l1 l2 l3]
     %     logo_pos = [[x1,y1,w1,h1] [x2,y2,w2,h2] ...]
+    fprintf('running -- logo detector\n');
     logo_results = [];
     logo_pos = [];
     if isfield(options, 'logo')
-        switch options.logo
+        switch options.logo.type
             case 'sift'
-                [logo_results, logo_pos] = detect_logo_sift(frames,options.network);
+                [logo_results,logo_pos] = detect_logo_sift(frames, ...
+                                                           options.logo.network);
             case 'ncc'
-                [logo_results, logo_pos] = detect_logo_ncc(frames,options.network);                
+                [logo_results,logo_pos] = detect_logo_ncc(frames, ...
+                                                          options.logo.network, ...
+                                                          options.logo.threshold);            
         end    
     end
+    fprintf('-> done\n');
     
     
     % TODO: add face here
@@ -114,16 +132,21 @@ end
 
 
 function show_results(results, clip_type, clip_id)
+    fprintf('rendering output\n');
+
+    cd('../results/');
+    out_vid = VideoWriter(sprintf('%s-%d.mp4', clip_type, clip_id), 'MPEG-4');
+    out_vid.Quality = 100;
+
     switch clip_type
         case 'img'
-            out_vid = VideoWriter(sprintf('%s-%d.mp4', clip_type, clip_id), 'MPEG-4');
-            out_vid.Quality = 100;
             out_vid.FrameRate = 8;
             open(out_vid);
             
             % set up scene results
             results = setfield(results, 'scene', [0;results.scene]);
             scene_num = 1;
+            prev_frame_scene = 0;
             
             f = figure('Visible','off','Units', 'pixels');
             
@@ -132,16 +155,16 @@ function show_results(results, clip_type, clip_id)
             LAST_FRAME = numel(fieldnames(frames));            
             for i = FIRST_FRAME:LAST_FRAME
                 % get each frame
-                fprintf('frame %d\n',i);
+                fprintf('   frame %d\n',i);
                 frame = frames.(sprintf('frame%d',i));
                 imshow(frame);
                 hold on;
                 
                 % output the scene change
-                if results.scene(i)
-                    % TODO: check there isn't going to be a sequence of 1s
+                if results.scene(i) && ~prev_frame_scene
                     scene_num = scene_num+1;
                 end
+                prev_frame_scene = results.scene(i);
                 text(10, 15, sprintf('SCENE %d', scene_num), ...
                     'Color','white','FontSize',18,'FontWeight','bold');
                 
@@ -159,12 +182,9 @@ function show_results(results, clip_type, clip_id)
                 [out_frame, ~] = frame2im(F);
                 writeVideo(out_vid,out_frame);
             end
-            close(out_vid);
 
         case 'vid'
             vid = get_video(clip_id);
-            out_vid = VideoWriter(sprintf('%s-%d.mp4', clip_type, clip_id), 'MPEG-4');
-            out_vid.Quality = 100;
             out_vid.FrameRate = vid.FrameRate;
             open(out_vid);
 
@@ -209,25 +229,8 @@ function show_results(results, clip_type, clip_id)
                 [out_frame, ~] = frame2im(F);
                 writeVideo(out_vid,out_frame);
             end
-            close(out_vid);
     end
+    
+    close(out_vid);
+    cd('../code/');
 end
-
-% 
-%     % show results
-%     % |results.scene| = |imgs| - 1 always
-%     i = 1;
-%     continued = 0;
-%     while i < size(results.scene,1) + 1
-%         figure;
-%         if results.scene(i)
-%             imshow(clip.(sprintf('img%d', i)));
-%             continued = 1;
-%         elseif continued
-%             imshow(clip.(sprintf('img%d', i)));
-%             continued = 0;
-%         else
-%             continued = 0;
-%         end            
-%         i = i + 1;
-%     end
