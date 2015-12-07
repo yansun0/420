@@ -1,21 +1,19 @@
-function results = detect_scene_hist(frames)
+function results = detect_scene_hist(frames, threshold)
     FIRST_FRAME = 1;
     LAST_FRAME = numel(fieldnames(frames));
 
 	scene_num = 1;
     scene_vals = zeros(LAST_FRAME-1,1);
 	for i = FIRST_FRAME:LAST_FRAME-1
-        img_cur = frames.(sprintf('img%d',i));
-        img_next = frames.(sprintf('img%d',i+1));
+        img_cur = frames.(sprintf('frame%d',i));
+        img_next = frames.(sprintf('frame%d',i+1));
 	    sim = get_similarity(img_cur, img_next);
 		fprintf('Similarity of frame %d to %d: %.4f\n', i, i + 1, sim);
         
-		if sim < 0.91
+		if sim < threshold
             scene_num = scene_num + 1;
             fprintf('------------------------------------\n');
-            fprintf('------------------------------------\n');
             fprintf('NEW SCENE %d of frame %d to %d: %.4f\n', scene_num, i, i + 1, sim);
-            fprintf('------------------------------------\n');
             fprintf('------------------------------------\n');
             scene_vals(i) = 1;
         else
@@ -23,6 +21,8 @@ function results = detect_scene_hist(frames)
         end
     end
     
+    % edge case -- first frame might have fadein/fadeout, shouldn't count
+    scene_vals(1) = 0;
     results = scene_vals;
 end
 

@@ -1,14 +1,13 @@
-function [results, pos] = detect_logo_ncc(frames, network)
+function [results, pos] = detect_logo_ncc(frames, network, threshold)
     results = [];
     pos = [];
     logo = load_logo(network);
 
-    SCORE_THRESHOLD = 0.75;
     FIRST_FRAME = 1;
     LAST_FRAME = numel(fieldnames(frames));
 
-    for i = FIRST_FRAME:LAST_FRAME-1
-        frame = frames.(sprintf('img%d',i));
+    for i = FIRST_FRAME:LAST_FRAME
+        frame = frames.(sprintf('frame%d',i));
         logo_gray = im2single(rgb2gray(logo));
         frame_gray = im2single(rgb2gray(frame));
         
@@ -19,7 +18,7 @@ function [results, pos] = detect_logo_ncc(frames, network)
         x = x_peaks(1);
 
         fprintf('frame %d -> score %f\n', i, logo_score);
-        if logo_score > SCORE_THRESHOLD
+        if logo_score > threshold
             results = [results; 1]; %#ok<AGROW>
             logo_pos = get_logo_box(x,y,size(logo));
             pos = [pos; logo_pos]; %#ok<AGROW>
@@ -44,7 +43,7 @@ end
 
 
 function logo_box = get_logo_box(x, y, logo_size)
-    PADDING = 10;
+    PADDING = 5;
     height = logo_size(1);
     width = logo_size(2);
     logo_box = [x - width - PADDING, ...
